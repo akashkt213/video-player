@@ -1,5 +1,4 @@
 import { useEffect, useReducer, useRef } from "react";
-import video from "./assets/35860-408654164.mp4";
 import { FastForwardIcon, PauseIcon, PlayIcon, RewindIcon } from "lucide-react";
 
 const App = () => {
@@ -135,7 +134,7 @@ const App = () => {
     <div className="w-[80vw] h-[80vh] flex items-center justify-center">
       <div className="w-full h-full">
         <video
-          src={video}
+          src="/media/stream.m3u8"
           ref={videoRef}
           className="w-full h-full object-cover"
         />
