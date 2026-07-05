@@ -1,5 +1,7 @@
 import { useEffect, useReducer, useRef } from "react";
 import { FastForwardIcon, PauseIcon, PlayIcon, RewindIcon } from "lucide-react";
+import { useHls } from "./hooks/useHls";
+import formatTime from "./utils/formatTime";
 
 const App = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -53,11 +55,12 @@ const App = () => {
     dispatch({ type: "setVolume", payload: volume });
   };
 
-
   const timeUpdate = () => {
-    dispatch({ type: "setCurrentTime", payload: videoRef?.current?.currentTime });
+    dispatch({
+      type: "setCurrentTime",
+      payload: videoRef?.current?.currentTime,
+    });
   };
-
 
   const durationChange = () => {
     dispatch({ type: "setDuration", payload: videoRef?.current?.duration });
@@ -65,9 +68,6 @@ const App = () => {
   const volumeChange = () => {
     dispatch({ type: "setVolume", payload: videoRef?.current?.volume });
   };
-
-
-  
 
   useEffect(() => {
     const video = videoRef.current;
@@ -90,6 +90,8 @@ const App = () => {
     };
   }, []);
 
+  useHls(videoRef);
+
   const rewind = () => {
     const video = videoRef?.current;
     if (!video) return;
@@ -103,26 +105,6 @@ const App = () => {
   };
   const renderPlayPauseIcon = () => (isPlaying ? <PauseIcon /> : <PlayIcon />);
 
-
-  const formatTime = (timeInSeconds: number) => {
-    if (!Number.isFinite(timeInSeconds)) return "00:00";
-  
-    const totalSeconds = Math.floor(timeInSeconds);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-  
-    const mm = String(minutes).padStart(2, "0");
-    const ss = String(seconds).padStart(2, "0");
-  
-    if (hours > 0) {
-      const hh = String(hours).padStart(2, "0");
-      return `${hh}:${mm}:${ss}`;
-    }
-  
-    return `${mm}:${ss}`;
-  };
-
   const setSeekTime = (seekTime: number) => {
     const video = videoRef?.current;
     if (!video) return;
@@ -133,20 +115,21 @@ const App = () => {
   return (
     <div className="w-[80vw] h-[80vh] flex items-center justify-center">
       <div className="w-full h-full">
-        <video
-          src="/media/stream.m3u8"
-          ref={videoRef}
-          className="w-full h-full object-cover"
-        />
-
+        <video ref={videoRef} className="w-full h-full object-cover" />
 
         <div>
-          <input type="range" min="0" max={duration.toString()} step="1" value={state.currentTime} className="w-full" onChange={(e) => {
-            setSeekTime(parseFloat(e.target.value));
-          }} />
-
+          <input
+            type="range"
+            min="0"
+            max={duration.toString()}
+            step="1"
+            value={state.currentTime}
+            className="w-full"
+            onChange={(e) => {
+              setSeekTime(parseFloat(e.target.value));
+            }}
+          />
         </div>
-
 
         <div className="flex items-center justify-center gap-4">
           <button
@@ -173,11 +156,18 @@ const App = () => {
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
-      
+
         <div>
-          <input type="range" min="0" max="1" step="0.01" value={state.volume} onChange={(e) => {
-            setVolume(parseFloat(e.target.value));
-          }} />
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={state.volume}
+            onChange={(e) => {
+              setVolume(parseFloat(e.target.value));
+            }}
+          />
         </div>
       </div>
     </div>
