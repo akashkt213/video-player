@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  background: #0a0a0b;
+  color: #f4f4f5;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
