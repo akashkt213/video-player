@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-INPUT="${1:-src/assets/35860-408654164.mp4}"
-OUTPUT_DIR="public/adaptive-media"
+INPUT="${1:?Usage: package-hls.sh <input.mp4> <output_dir>}"
+OUTPUT_DIR="${2:?Usage: package-hls.sh <input.mp4> <output_dir>}"
 
 mkdir -p "$OUTPUT_DIR"
 
