@@ -1,10 +1,11 @@
 import { useEffect, useState, type ChangeEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PlayIcon, UploadIcon } from "lucide-react";
 
 const API_BASE = "http://localhost:3001/api/videos";
 
 const Upload = () => {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
@@ -90,7 +91,6 @@ const Upload = () => {
       });
       const data = (await response.json()) as {
         playbackUrl?: string;
-        signedPlaybackUrl?: string;
         error?: string;
       };
 
@@ -99,10 +99,11 @@ const Upload = () => {
         return;
       }
 
-      setPlaybackUrl(data.playbackUrl ?? data.signedPlaybackUrl ?? null);
+      setPlaybackUrl(data.playbackUrl ?? null);
       setStatus("Processing complete. HLS uploaded to S3.");
       console.log("playback URL:", data.playbackUrl);
-      console.log("signed playback URL:", data.signedPlaybackUrl);
+
+      navigate(`/?id=${encodeURIComponent(videoId)}`);
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : "Processing request failed",
@@ -176,9 +177,21 @@ const Upload = () => {
         )}
 
         {playbackUrl && (
-          <p className="mt-2 break-all text-xs text-zinc-500">
-            playback: {playbackUrl}
-          </p>
+          <>
+            <p className="mt-2 break-all text-xs text-zinc-500">
+              playback: {playbackUrl}
+            </p>
+            <button
+              type="button"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-600 bg-transparent px-4 py-3 text-sm font-semibold text-zinc-100 transition-colors hover:border-zinc-400"
+              onClick={() =>
+                videoId && navigate(`/?id=${encodeURIComponent(videoId)}`)
+              }
+            >
+              <PlayIcon size={16} />
+              Play in player
+            </button>
+          </>
         )}
       </div>
     </div>

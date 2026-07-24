@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import Hls, { ErrorTypes, type Level } from "hls.js";
 
-export const HLS_STREAM_URL = "/adaptive-media/master.m3u8";
-
 export function useHls(
   videoRef: RefObject<HTMLVideoElement | null>,
-  src: string = HLS_STREAM_URL,
+  src: string | null,
 ) {
   const hlsRef = useRef<Hls | null>(null);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -16,10 +14,19 @@ export function useHls(
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !src) {
+      setIsReady(false);
+      setLevels([]);
+      setCurrentLevel(-1);
+      setActiveLevel(-1);
+      return;
+    }
 
     setIsReady(false);
     setError(null);
+    setLevels([]);
+    setCurrentLevel(-1);
+    setActiveLevel(-1);
 
     if (!Hls.isSupported()) {
       if (video.canPlayType("application/vnd.apple.mpegurl")) {

@@ -12,15 +12,15 @@ ffmpeg -y -i "$INPUT" \
    [v1]scale=w=640:h=360[v1out]; \
    [v2]scale=w=1280:h=720[v2out]; \
    [v3]scale=w=1920:h=1080[v3out]" \
-  -map "[v1out]" -map 0:a -c:v libx264 -b:v 800k  -c:a aac -b:a 96k \
+  -map "[v1out]" -map 0:a? -c:v libx264 -b:v 800k  -c:a aac -b:a 96k \
     -hls_time 4 -hls_list_size 0 \
     -hls_segment_filename "$OUTPUT_DIR/360p_%03d.ts" \
     "$OUTPUT_DIR/360p.m3u8" \
-  -map "[v2out]" -map 0:a -c:v libx264 -b:v 2800k -c:a aac -b:a 128k \
+  -map "[v2out]" -map 0:a? -c:v libx264 -b:v 2800k -c:a aac -b:a 128k \
     -hls_time 4 -hls_list_size 0 \
     -hls_segment_filename "$OUTPUT_DIR/720p_%03d.ts" \
     "$OUTPUT_DIR/720p.m3u8" \
-  -map "[v3out]" -map 0:a -c:v libx264 -b:v 5000k -c:a aac -b:a 128k \
+  -map "[v3out]" -map 0:a? -c:v libx264 -b:v 5000k -c:a aac -b:a 128k \
     -hls_time 4 -hls_list_size 0 \
     -hls_segment_filename "$OUTPUT_DIR/1080p_%03d.ts" \
     "$OUTPUT_DIR/1080p.m3u8"
