@@ -6,11 +6,13 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   FastForwardIcon,
   PauseIcon,
   PlayIcon,
   RewindIcon,
+  UploadIcon,
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react";
@@ -18,9 +20,17 @@ import { useHls } from "./hooks/useHls";
 import formatTime from "./utils/formatTime";
 import "./App.css";
 
+const API_BASE = "http://localhost:3001/api/videos";
 const HIDE_CONTROLS_MS = 2500;
 
 const App = () => {
+  const [searchParams] = useSearchParams();
+  const videoId = searchParams.get("id")?.trim() || null;
+
+  const [streamSrc, setStreamSrc] = useState<string | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const [loadingStream, setLoadingStream] = useState(true);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const lastVolumeRef = useRef(1);
@@ -61,6 +71,61 @@ const App = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { isPlaying, currentTime, duration, volume, muted } = state;
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchMasterUrl = async () => {
+      setLoadingStream(true);
+      setStreamError(null);
+      setStreamSrc(null);
+
+      try {
+        if (videoId) {
+          const response = await fetch(`${API_BASE}/${videoId}/playback`);
+          const data = (await response.json()) as {
+            playbackUrl?: string;
+            error?: string;
+          };
+          if (!response.ok) {
+            throw new Error(data.error ?? "Failed to fetch playback URL");
+          }
+          if (!cancelled) setStreamSrc(data.playbackUrl ?? null);
+          return;
+        }
+
+        const response = await fetch(API_BASE);
+        const data = (await response.json()) as {
+          videos?: Array<{ id: string; playbackUrl: string }>;
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(data.error ?? "Failed to list videos");
+        }
+
+        const latest = data.videos?.[data.videos.length - 1];
+        if (!cancelled) {
+          setStreamSrc(latest?.playbackUrl ?? null);
+          if (!latest) {
+            setStreamError("No processed videos yet. Upload and process one.");
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStreamError(
+            error instanceof Error ? error.message : "Failed to load stream",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoadingStream(false);
+      }
+    };
+
+    void fetchMasterUrl();
+    return () => {
+      cancelled = true;
+    };
+  }, [videoId]);
+
   const {
     startLoad,
     setQuality,
@@ -69,7 +134,13 @@ const App = () => {
     activeLevel,
     isReady,
     error,
-  } = useHls(videoRef);
+  } = useHls(videoRef, streamSrc);
+
+  useEffect(() => {
+    dispatch({ type: "setPlaying", payload: false });
+    dispatch({ type: "setCurrentTime", payload: 0 });
+    dispatch({ type: "setDuration", payload: 0 });
+  }, [streamSrc]);
 
   const revealControls = (playing = isPlaying) => {
     setShowControls(true);
@@ -246,6 +317,11 @@ const App = () => {
         if (isPlaying) setShowControls(false);
       }}
     >
+      <Link to="/upload" className="player__upload-link" aria-label="Upload video">
+        <UploadIcon size={16} />
+        Upload
+      </Link>
+
       <video
         ref={videoRef}
         playsInline
@@ -255,12 +331,18 @@ const App = () => {
 
       {qualityLabel && <span className="player__badge">{qualityLabel}</span>}
 
-      {!isReady && !error && (
-        <p className="player__status">Loading stream…</p>
+      {!isReady && !error && !streamError && (
+        <p className="player__status">
+          {loadingStream ? "Fetching master URL…" : "Loading stream…"}
+        </p>
       )}
-      {error && <p className="player__status player__status--error">{error}</p>}
+      {(streamError || error) && (
+        <p className="player__status player__status--error">
+          {streamError ?? error}
+        </p>
+      )}
 
-      {!isPlaying && isReady && !error && (
+      {!isPlaying && isReady && !error && !streamError && (
         <div className="player__center">
           <button
             type="button"

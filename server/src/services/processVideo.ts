@@ -4,9 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  createDownloadUrl,
   downloadObjectToFile,
-  publicObjectUrl,
   uploadDirectory,
 } from "../lib/s3.js";
 
@@ -45,15 +43,11 @@ export async function processVideoToHls(videoId: string) {
     await uploadDirectory(hlsDir, hlsPrefix);
 
     const masterKey = `${hlsPrefix}/master.m3u8`;
-    const playbackUrl = publicObjectUrl(masterKey);
-    const signedPlaybackUrl = await createDownloadUrl(masterKey);
 
     return {
       videoId,
       status: "completed" as const,
       masterKey,
-      playbackUrl,
-      signedPlaybackUrl,
     };
   } finally {
     await rm(workDir, { recursive: true, force: true });
