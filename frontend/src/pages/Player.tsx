@@ -16,14 +16,14 @@ import {
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react";
-import { useHls } from "./hooks/useHls";
-import formatTime from "./utils/formatTime";
-import "./App.css";
+import "../App.css";
+import { useHls } from "../hooks/useHls";
+import formatTime from "../utils/formatTime";
 
 const API_BASE = "http://localhost:3001/api/videos";
 const HIDE_CONTROLS_MS = 2500;
 
-const App = () => {
+const Player = () => {
   const [searchParams] = useSearchParams();
   const videoId = searchParams.get("id")?.trim() || null;
 
@@ -82,10 +82,13 @@ const App = () => {
       try {
         if (videoId) {
           const response = await fetch(`${API_BASE}/${videoId}/playback`);
+          console.log("responseresponse",response.status)
+
           const data = (await response.json()) as {
             playbackUrl?: string;
             error?: string;
           };
+          
           if (!response.ok) {
             throw new Error(data.error ?? "Failed to fetch playback URL");
           }
@@ -456,4 +459,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default Player;
