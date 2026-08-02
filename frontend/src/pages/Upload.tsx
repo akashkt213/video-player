@@ -103,7 +103,7 @@ const Upload = () => {
       setStatus("Processing complete. HLS uploaded to S3.");
       console.log("playback URL:", data.playbackUrl);
 
-      navigate(`/?id=${encodeURIComponent(videoId)}`);
+      navigate(`/video?id=${encodeURIComponent(videoId)}`);
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : "Processing request failed",
