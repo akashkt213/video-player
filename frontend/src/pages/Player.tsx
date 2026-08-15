@@ -9,6 +9,7 @@ import {
 import { Link, useSearchParams } from "react-router-dom";
 import {
   FastForwardIcon,
+  LoaderCircleIcon,
   PauseIcon,
   PlayIcon,
   RewindIcon,
@@ -17,6 +18,7 @@ import {
   VolumeXIcon,
 } from "lucide-react";
 import "../App.css";
+import HlsLesson from "../components/HlsLesson";
 import { useHls } from "../hooks/useHls";
 import formatTime from "../utils/formatTime";
 
@@ -82,8 +84,6 @@ const Player = () => {
       try {
         if (videoId) {
           const response = await fetch(`${API_BASE}/${videoId}/playback`);
-          console.log("responseresponse",response.status)
-
           const data = (await response.json()) as {
             playbackUrl?: string;
             error?: string;
@@ -136,7 +136,9 @@ const Player = () => {
     currentLevel,
     activeLevel,
     isReady,
+    isSwitchingQuality,
     error,
+    lesson,
   } = useHls(videoRef, streamSrc);
 
   useEffect(() => {
@@ -320,6 +322,12 @@ const Player = () => {
         if (isPlaying) setShowControls(false);
       }}
     >
+      <HlsLesson
+        lesson={lesson}
+        loadingStream={loadingStream}
+        streamError={streamError}
+      />
+
       <Link to="/upload" className="player__upload-link" aria-label="Upload video">
         <UploadIcon size={16} />
         Upload
@@ -345,7 +353,14 @@ const Player = () => {
         </p>
       )}
 
-      {!isPlaying && isReady && !error && !streamError && (
+      {isSwitchingQuality && (
+        <div className="player__spinner" role="status" aria-live="polite">
+          <LoaderCircleIcon size={28} className="player__spinner-icon" />
+          <span>Switching quality…</span>
+        </div>
+      )}
+
+      {!isPlaying && isReady && !error && !streamError && !isSwitchingQuality && (
         <div className="player__center">
           <button
             type="button"

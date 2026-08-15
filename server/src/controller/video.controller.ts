@@ -107,17 +107,48 @@ export const videoController = {
       return;
     }
 
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const send = (payload: Record<string, unknown>) => {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    const abort = new AbortController();
+    const onClose = () => {
+      if (!res.writableEnded) abort.abort();
+    };
+    req.on("close", onClose);
+
     try {
       console.log(`Processing video ${id}…`);
-      const result = await processVideoToHls(id);
+      const result = await processVideoToHls(id, (event) => send(event), abort.signal);
       const playbackUrl = apiPlaybackUrl(id, requestBaseUrl(req));
       console.log(`Processing complete for ${id}:`, playbackUrl);
-      res.status(200).json({ ...result, playbackUrl });
-    } catch (error) {
-      console.error(`Failed to process video ${id}:`, error);
-      res.status(500).json({
-        error: error instanceof Error ? error.message : "Processing failed",
+      send({
+        stage: "completed",
+        message: "HLS package is on S3. The player can start from master.m3u8.",
+        percent: 100,
+        playbackUrl,
+        ...result,
       });
+    } catch (error) {
+      if (abort.signal.aborted) {
+        console.log(`Processing cancelled for ${id}`);
+      } else {
+        console.error(`Failed to process video ${id}:`, error);
+        send({
+          stage: "failed",
+          message:
+            error instanceof Error ? error.message : "Processing failed",
+        });
+      }
+    } finally {
+      req.off("close", onClose);
+      res.end();
     }
   },
 };
