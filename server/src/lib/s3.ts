@@ -9,8 +9,8 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createWriteStream } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { Transform, type Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type { Readable } from "node:stream";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
@@ -39,7 +39,11 @@ export async function createDownloadUrl(key: string) {
   return getSignedUrl(s3, command, { expiresIn: 900 });
 }
 
-export async function downloadObjectToFile(key: string, destPath: string) {
+export async function downloadObjectToFile(
+  key: string,
+  destPath: string,
+  onProgress?: (loaded: number, total: number) => void,
+) {
   const result = await s3.send(
     new GetObjectCommand({
       Bucket: bucket(),
@@ -51,7 +55,23 @@ export async function downloadObjectToFile(key: string, destPath: string) {
     throw new Error(`S3 object has no body: ${key}`);
   }
 
-  await pipeline(result.Body as Readable, createWriteStream(destPath));
+  const total = result.ContentLength ?? 0;
+  let loaded = 0;
+  let lastEmit = 0;
+
+  const counter = new Transform({
+    transform(chunk, _encoding, callback) {
+      loaded += chunk.length;
+      const now = Date.now();
+      if (total > 0 && (now - lastEmit >= 200 || loaded >= total)) {
+        lastEmit = now;
+        onProgress?.(loaded, total);
+      }
+      callback(null, chunk);
+    },
+  });
+
+  await pipeline(result.Body as Readable, counter, createWriteStream(destPath));
 }
 
 function contentTypeFor(fileName: string) {
@@ -60,8 +80,13 @@ function contentTypeFor(fileName: string) {
   return "application/octet-stream";
 }
 
-export async function uploadDirectory(localDir: string, s3Prefix: string) {
+export async function uploadDirectory(
+  localDir: string,
+  s3Prefix: string,
+  onProgress?: (done: number, total: number) => void,
+) {
   const files = await readdir(localDir);
+  let done = 0;
 
   await Promise.all(
     files.map(async (fileName) => {
@@ -74,6 +99,8 @@ export async function uploadDirectory(localDir: string, s3Prefix: string) {
           ContentType: contentTypeFor(fileName),
         }),
       );
+      done += 1;
+      onProgress?.(done, files.length);
     }),
   );
 }

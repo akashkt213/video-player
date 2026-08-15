@@ -6,7 +6,9 @@ OUTPUT_DIR="${2:?Usage: package-hls.sh <input.mp4> <output_dir>}"
 
 mkdir -p "$OUTPUT_DIR"
 
-ffmpeg -y -i "$INPUT" \
+# -progress pipe:1 writes machine-readable key=value lines to stdout
+# so the API can stream transcode percent to the tutorial UI.
+ffmpeg -y -nostats -progress pipe:1 -i "$INPUT" \
   -filter_complex \
   "[0:v]split=3[v1][v2][v3]; \
    [v1]scale=w=640:h=360[v1out]; \
